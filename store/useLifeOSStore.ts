@@ -28,6 +28,7 @@ type LifeOSState = {
   setTimeframe: (timeframe: TimeframeFilter) => void;
   setChatHistory: (history: LifeOSChatMessage[]) => void;
   appendChatMessage: (message: LifeOSChatMessage) => void;
+  updateChatMessage: (id: string, content: string) => void;
   setLoading: (value: boolean) => void;
   setTheme: (theme: Theme) => void;
   reset: () => void;
@@ -64,6 +65,12 @@ export const useLifeOSStore = create<LifeOSState>()(
       setChatHistory: (history) => set({ chatHistory: history }),
       appendChatMessage: (message) =>
         set((state) => ({ chatHistory: [...state.chatHistory, message] })),
+      updateChatMessage: (id, content) =>
+        set((state) => ({
+          chatHistory: state.chatHistory.map((m) =>
+            m.id === id ? { ...m, content } : m
+          ),
+        })),
       setLoading: (value) => set({ isLoading: value }),
       setTheme: (theme) => set({ theme }),
       reset: () =>

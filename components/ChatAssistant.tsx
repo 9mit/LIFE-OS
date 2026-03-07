@@ -10,13 +10,27 @@ import type {
   LifeOSDataRecord,
 } from "../types/data";
 import { summarizeData } from "../utils/analyzeData";
-import { Trash2, Sparkles, Send, Bot, User, MessageCircle } from "lucide-react";
+import { Trash2, Sparkles, Send, Bot, User, MessageCircle, Cpu, Mic, MicOff, Loader2 } from "lucide-react";
+import { getLLMEngine, generateLocalLLMResponse, SELECTED_MODEL } from "../utils/localLLM";
+import { useWhisper } from "../hooks/useWhisper";
+import type { InitProgressReport } from "@mlc-ai/web-llm";
 
 const THRESHOLD = 0.3;
 
 const ChatAssistant = () => {
   const [input, setInput] = useState("");
   const [answering, setAnswering] = useState(false);
+  const [llmProgress, setLlmProgress] = useState<InitProgressReport | null>(null);
+  const [llmReady, setLlmReady] = useState(false);
+
+  const {
+    isRecording,
+    isTranscribing,
+    transcription,
+    startRecording,
+    stopRecording
+  } = useWhisper();
+
   const {
     appendChatMessage,
     chatHistory,
@@ -30,6 +44,15 @@ const ChatAssistant = () => {
 
   useEffect(() => {
     getChatHistory().then(setChatHistory);
+
+    // Initialize LLM Engine in background
+    if (navigator.gpu) {
+      getLLMEngine((progress) => {
+        setLlmProgress(progress);
+      }).then((engine) => {
+        if (engine) setLlmReady(true);
+      }).catch(console.error);
+    }
   }, [getChatHistory, setChatHistory]);
 
   useEffect(() => {
@@ -37,7 +60,14 @@ const ChatAssistant = () => {
       top: scrollRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [chatHistory]);
+  }, [chatHistory, answering]);
+
+  // When whisper completes transcription, populate the input automatically
+  useEffect(() => {
+    if (transcription) {
+      setInput((prev) => prev.trim() ? prev + " " + transcription : transcription);
+    }
+  }, [transcription]);
 
   const respond = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,22 +84,49 @@ const ChatAssistant = () => {
     appendChatMessage(userMessage);
     await addChatMessage(userMessage);
 
-    const response = await generateAnswer(
-      input.trim(),
-      records,
-      summary ?? summarizeData(records, timeframe)
-    );
+    const syntheticId = nanoid();
     const assistantMessage: LifeOSChatMessage = {
-      id: nanoid(),
+      id: syntheticId,
       role: "assistant",
-      content: response,
+      content: "",
       createdAt: Date.now(),
     };
-    appendChatMessage(assistantMessage);
-    await addChatMessage(assistantMessage);
 
+    appendChatMessage(assistantMessage);
     setInput("");
-    setAnswering(false);
+
+    try {
+      if (llmReady) {
+        // True Local RAG Generation
+        await generateAnswerRAG(
+          input.trim(),
+          records,
+          summary ?? summarizeData(records, timeframe),
+          chatHistory,
+          (chunk: string) => {
+            // Stream text directly to the active message box in the Store
+            useLifeOSStore.getState().updateChatMessage(syntheticId, chunk);
+          }
+        );
+        // Save the final streamed message to IndexedDB
+        const finalContent = useLifeOSStore.getState().chatHistory.find(m => m.id === syntheticId)?.content || "";
+        await addChatMessage({ ...assistantMessage, content: finalContent });
+      } else {
+        // Fallback Heuristic Generation
+        const response = await generateAnswerFallback(
+          input.trim(),
+          records,
+          summary ?? summarizeData(records, timeframe)
+        );
+        useLifeOSStore.getState().updateChatMessage(syntheticId, response);
+        await addChatMessage({ ...assistantMessage, content: response });
+      }
+    } catch (error) {
+      console.error(error);
+      useLifeOSStore.getState().updateChatMessage(syntheticId, "I encountered an error analyzing that data locally. Please try again.");
+    } finally {
+      setAnswering(false);
+    }
   };
 
   const handleResetChat = async () => {
@@ -89,13 +146,20 @@ const ChatAssistant = () => {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-champagne-400 to-blush-500 shadow-md shadow-champagne-500/30">
               <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <div>
+            <div className="flex flex-col">
               <span className="text-xs font-semibold uppercase tracking-[0.25em] text-champagne-500 dark:text-champagne-400">
                 Ask LifeOS
               </span>
-              <p className="text-sm text-navy-600/80 dark:text-slate-300">
-                Converse with your data using AI-powered insights
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-navy-600/80 dark:text-slate-300">
+                  {llmReady ? "True local conversational AI active" : "Converse with your data insights"}
+                </p>
+                {llmReady && (
+                  <span className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-600 dark:bg-green-500/20 dark:text-green-400">
+                    <Cpu className="h-3 w-3" /> WebGPU Engine
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -177,6 +241,22 @@ const ChatAssistant = () => {
             <p className="text-sm text-navy-500 dark:text-slate-400 max-w-md">
               Ask your first question to begin exploring your personal data insights.
             </p>
+            {!llmReady && llmProgress && (
+              <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-champagne-200/50 bg-white/50 p-4 dark:border-champagne-500/20 dark:bg-navy-800/50">
+                <p className="text-xs font-medium text-navy-600 dark:text-champagne-300">
+                  <Cpu className="inline h-3.5 w-3.5 mr-1" /> Initializing Local Neural Engine
+                </p>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-champagne-100 dark:bg-navy-900">
+                  <div
+                    className="h-full bg-gradient-to-r from-champagne-400 to-blush-400 transition-all duration-300"
+                    style={{ width: `${Math.round(llmProgress.progress * 100)}%` }}
+                  />
+                </div>
+                <p className="text-[10px] text-navy-400 dark:text-slate-400 truncate w-full text-center">
+                  {llmProgress.text}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -184,19 +264,38 @@ const ChatAssistant = () => {
       {/* Input Form */}
       <form
         onSubmit={respond}
-        className="flex items-center gap-4 rounded-3xl border border-champagne-200/50 bg-gradient-to-r from-white/95 via-champagne-50/30 to-white/95 px-4 py-3 shadow-premium backdrop-blur dark:border-champagne-500/20 dark:from-navy-900/90 dark:via-navy-800/50 dark:to-navy-900/90"
+        className="flex items-center gap-3 rounded-3xl border border-champagne-200/50 bg-gradient-to-r from-white/95 via-champagne-50/30 to-white/95 px-4 py-3 shadow-premium backdrop-blur dark:border-champagne-500/20 dark:from-navy-900/90 dark:via-navy-800/50 dark:to-navy-900/90"
       >
+        <button
+          type="button"
+          disabled={isTranscribing}
+          onClick={isRecording ? stopRecording : startRecording}
+          className={`group relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 ${isRecording
+              ? "bg-red-500 shadow-red-500/30 animate-pulse text-white"
+              : "bg-champagne-100 text-champagne-600 hover:bg-champagne-200 dark:bg-navy-800 dark:text-champagne-300 dark:hover:bg-navy-700"
+            }`}
+          title={isRecording ? "Stop Recording" : "Use Voice Input"}
+        >
+          {isTranscribing ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : isRecording ? (
+            <MicOff className="h-5 w-5" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
+        </button>
+
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
           className="flex-1 rounded-2xl border border-champagne-200/50 bg-white/80 px-5 py-4 text-sm text-navy-700 outline-none transition-all placeholder:text-navy-400/50 focus:border-champagne-400 focus:ring-2 focus:ring-champagne-400/20 dark:border-champagne-500/20 dark:bg-navy-900/80 dark:text-champagne-100 dark:placeholder:text-slate-500 dark:focus:border-champagne-400/50"
-          placeholder="Ask anything about your personal data..."
-          disabled={answering}
+          placeholder={isRecording ? "Listening..." : isTranscribing ? "Transcribing audio..." : "Ask anything about your personal data..."}
+          disabled={answering || isRecording || isTranscribing}
         />
         <button
           type="submit"
           disabled={answering || !input.trim()}
-          className="group relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-r from-champagne-500 to-blush-500 shadow-lg shadow-champagne-500/30 transition-all hover:shadow-champagne-500/50 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+          className="group relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-r from-champagne-500 to-blush-500 shadow-lg shadow-champagne-500/30 transition-all hover:shadow-champagne-500/50 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
         >
           {answering ? (
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -209,7 +308,39 @@ const ChatAssistant = () => {
   );
 };
 
-async function generateAnswer(
+// --- TRUE GENERATIVE AI RAG PIPELINE ---
+async function generateAnswerRAG(
+  question: string,
+  records: LifeOSDataRecord[],
+  summary: InsightSummary,
+  chatHistory: LifeOSChatMessage[],
+  onChunk: (chunk: string) => void
+): Promise<void> {
+
+  // Retrieve relevant context using Transformers.js semantic embedding
+  const queryEmbedding = await textEmbedding(question);
+  const scored = (await Promise.all(records
+    .map(async (record) => ({
+      record,
+      score: cosineSimilarity(queryEmbedding, record.embedding),
+    }))))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 15); // Pass up to top 15 records as context
+
+  const relevantRecords = scored.filter((item) => item.score > THRESHOLD).map(i => i.record);
+
+  // Pass everything to WebLLM to formulate a response
+  await generateLocalLLMResponse(
+    question,
+    relevantRecords,
+    summary,
+    chatHistory.map(h => ({ role: h.role as any, content: h.content })),
+    onChunk
+  );
+}
+
+// --- FALLBACK HEURISTIC AI PIPELINE ---
+async function generateAnswerFallback(
   question: string,
   records: LifeOSDataRecord[],
   summary: InsightSummary

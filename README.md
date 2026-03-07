@@ -19,10 +19,12 @@
 
 - **🗂️ Data Studio** - Upload and manage CSV, JSON, and TXT files
 - **🔍 Insight Lab** - AI-powered analysis with keyword extraction, mood signals, and forecasting
-- **💬 Ask LifeOS** - Natural language queries across your indexed data
+- **🕸️ 3D Knowledge Graphs** - Visualize entity connections with interactive force-directed mapping
+- **💬 Ask LifeOS** - Generative RAG Q&A using local WebGPU LLMs
+- **🎙️ Edge-Voice Input** - Talk to LifeOS natively with local Whisper models for transcription
 - **📊 Reports** - Generate beautiful executive summaries and export to PDF
 - **🌙 Dark Mode** - Premium dark theme with glassmorphism design
-- **🔒 100% Offline** - All data stays on your device, no cloud dependencies
+- **🔒 100% Offline** - All data and AI inference stays on your device, no cloud dependencies
 
 ---
 
@@ -88,6 +90,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | **Dexie.js** | IndexedDB Wrapper |
 | **Zustand** | State Management |
 | **jsPDF** | PDF Export |
+| **@mlc-ai/web-llm** | Local WebGPU LLM Engine |
+| **@xenova/transformers**| Local Embeddings & Whisper |
+| **react-force-graph-3d**| 3D Knowledge Visualization |
 
 ---
 
@@ -131,8 +136,4 @@ MIT License - feel free to use this project for personal or commercial purposes.
 
 ---
 
-<div align="center">
 
-**Built with ❤️ for personal data sovereignty**
-
-</div>

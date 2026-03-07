@@ -14,6 +14,7 @@ import {
 } from "chart.js";
 import { SummaryCards } from "./SummaryCards";
 import { NumericHighlights } from "./NumericHighlights";
+import { KnowledgeGraph } from "./KnowledgeGraph";
 import { useLifeOSStore } from "../store/useLifeOSStore";
 import { useTheme } from "../hooks/useTheme";
 import { TrendingUp, PieChart, Zap } from "lucide-react";
@@ -109,8 +110,8 @@ export function InsightsDashboard() {
               key={range}
               onClick={() => setTimeframe(range)}
               className={`rounded-lg px-5 py-2 text-sm font-medium transition-all duration-300 ${timeframe === range
-                  ? "bg-gradient-to-r from-champagne-500 to-blush-500 text-white shadow-md"
-                  : "text-navy-600 hover:text-champagne-600 dark:text-slate-400 dark:hover:text-champagne-300"
+                ? "bg-gradient-to-r from-champagne-500 to-blush-500 text-white shadow-md"
+                : "text-navy-600 hover:text-champagne-600 dark:text-slate-400 dark:hover:text-champagne-300"
                 }`}
             >
               {RANGE_LABEL[range]}
@@ -236,6 +237,24 @@ export function InsightsDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* 3D Knowledge Graph */}
+      <div className="group rounded-3xl border border-champagne-200/50 bg-gradient-to-br from-white/95 via-champagne-50/30 to-white/95 p-8 shadow-premium backdrop-blur transition-all duration-300 hover:shadow-premium-lg dark:border-champagne-500/20 dark:from-navy-900/90 dark:via-navy-800/50 dark:to-navy-900/90">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-navy-500 to-navy-700 shadow-md">
+            <Zap className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-navy-500 dark:text-champagne-400">
+              Knowledge Graph
+            </h3>
+            <p className="text-base font-display font-semibold text-navy-900 dark:text-white">
+              Interactive map of your local entity connections
+            </p>
+          </div>
+        </div>
+        <KnowledgeGraph />
       </div>
 
       {/* Narrative Summary */}

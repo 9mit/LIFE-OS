@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local AI Models
+/public/models/*
+!/public/models/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,5 +1,4 @@
-
-import { useRef } from "react";
+import React, { useRef } from "react";
 import { exportDashboardToPDF } from "../utils/pdfExport";
 import { useLifeOSStore } from "../store/useLifeOSStore";
 import { Download, FileText, Sparkles, Target, MessageSquare } from "lucide-react";

@@ -1,4 +1,4 @@
-
+import React from "react";
 import type { InsightSummary } from "../types/data";
 import { formatNumber } from "../utils/utils";
 import { Database, Layers, Tag, FileText, TrendingUp } from "lucide-react";
@@ -53,17 +53,20 @@ export function SummaryCards({ summary = FALLBACK_SUMMARY }: SummaryCardsProps) 
 
   return (
     <div className="grid gap-5 md:grid-cols-5">
-      {CARD_CONFIG.map((config, index) => (
-        <Card
-          key={config.key}
-          title={config.label}
-          value={getCardValue(config.key)}
-          icon={config.icon}
-          gradient={config.gradient}
-          large={config.large}
-          index={index}
-        />
-      ))}
+      {CARD_CONFIG.map((config, index) => {
+        const value = getCardValue(config.key);
+        return (
+          <Card
+            key={config.key}
+            title={config.label}
+            value={value}
+            icon={config.icon}
+            gradient={config.gradient}
+            large={config.large}
+            index={index}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -82,6 +85,7 @@ function Card({
   gradient: string;
   large?: boolean;
   index: number;
+  key?: string;
 }) {
   return (
     <div
