@@ -6,6 +6,8 @@ import { useLifeOSStore } from "../store/useLifeOSStore";
 import { parseCSV } from "../utils/parseCSV";
 import { parseText } from "../utils/parseText";
 import { parseJSON } from "../utils/parseJSON";
+import { parseExcel } from "../utils/parseExcel";
+import { parsePDF } from "../utils/parsePDF";
 import type { LifeOSDataRecord, LifeOSSource } from "../types/data";
 
 export function UploadPanel() {
@@ -30,6 +32,8 @@ export function UploadPanel() {
         if (extension === "csv") sourceType = "csv";
         else if (extension === "json") sourceType = "json";
         else if (["txt", "md"].includes(extension ?? "")) sourceType = "txt";
+        else if (["xlsx", "xls"].includes(extension ?? "")) sourceType = "excel" as any;
+        else if (extension === "pdf") sourceType = "pdf" as any;
 
         if (!sourceType) {
           setStatus(`Unsupported format: ${file.name}`);
@@ -42,6 +46,8 @@ export function UploadPanel() {
         if (sourceType === "csv") records = await parseCSV(file, source.id);
         if (sourceType === "json") records = await parseJSON(file, source.id);
         if (sourceType === "txt") records = await parseText(file, source.id);
+        if (sourceType === ("excel" as any)) records = await parseExcel(file, source.id);
+        if (sourceType === ("pdf" as any)) records = await parsePDF(file, source.id);
 
         await addRecords(records);
       }
@@ -85,8 +91,8 @@ export function UploadPanel() {
       {/* Main Upload Zone */}
       <div
         className={`relative overflow-hidden rounded-3xl border-2 border-dashed p-12 transition-all duration-500 ${isDragging
-            ? "border-champagne-400 bg-gradient-to-br from-champagne-500/10 via-blush-500/5 to-transparent shadow-gold-glow scale-[1.02]"
-            : "border-champagne-300/30 bg-gradient-to-br from-white/80 via-champagne-50/50 to-white/80 dark:from-navy-900/80 dark:via-navy-800/50 dark:to-navy-900/80 hover:border-champagne-400/50"
+          ? "border-champagne-400 bg-gradient-to-br from-champagne-500/10 via-blush-500/5 to-transparent shadow-gold-glow scale-[1.02]"
+          : "border-champagne-300/30 bg-gradient-to-br from-white/80 via-champagne-50/50 to-white/80 dark:from-navy-900/80 dark:via-navy-800/50 dark:to-navy-900/80 hover:border-champagne-400/50"
           } backdrop-blur-sm shadow-premium`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -125,7 +131,7 @@ export function UploadPanel() {
             </div>
             <input
               type="file"
-              accept=".csv,.json,.txt,.md"
+              accept=".csv,.json,.txt,.md,.xlsx,.xls,.pdf"
               multiple
               onChange={(event) => handleFiles(event.target.files)}
               className="hidden"
@@ -134,7 +140,7 @@ export function UploadPanel() {
 
           {/* Supported Formats */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            {["CSV", "JSON", "TXT", "MD"].map((format) => (
+            {["CSV", "JSON", "TXT", "MD", "EXCEL", "PDF"].map((format) => (
               <span
                 key={format}
                 className="inline-flex items-center gap-1.5 rounded-full border border-champagne-200/50 bg-white/60 px-3 py-1.5 text-xs font-medium text-navy-600 dark:border-champagne-500/20 dark:bg-navy-800/50 dark:text-champagne-300"
@@ -165,8 +171,8 @@ export function UploadPanel() {
       {/* Status Message */}
       {status && (
         <div className={`flex items-center gap-3 rounded-2xl border px-6 py-4 shadow-sm backdrop-blur animate-slide-up ${isSuccess
-            ? "border-champagne-200/50 bg-gradient-to-r from-champagne-50/80 to-white/80 dark:border-champagne-500/20 dark:from-champagne-900/20 dark:to-navy-900/50"
-            : "border-blush-200/50 bg-gradient-to-r from-blush-50/80 to-white/80 dark:border-blush-500/20 dark:from-blush-900/20 dark:to-navy-900/50"
+          ? "border-champagne-200/50 bg-gradient-to-r from-champagne-50/80 to-white/80 dark:border-champagne-500/20 dark:from-champagne-900/20 dark:to-navy-900/50"
+          : "border-blush-200/50 bg-gradient-to-r from-blush-50/80 to-white/80 dark:border-blush-500/20 dark:from-blush-900/20 dark:to-navy-900/50"
           }`}>
           {isSuccess ? (
             <CheckCircle2 className="h-5 w-5 text-champagne-500" />
