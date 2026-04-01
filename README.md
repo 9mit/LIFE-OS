@@ -4,6 +4,9 @@
 
 <img width="1910" height="990" alt="image" src="https://github.com/user-attachments/assets/a41ccbb5-7da4-47f2-af4d-508ffef451d3" />
 
+<img width="1908" height="988" alt="image" src="https://github.com/user-attachments/assets/2519e389-f837-4af9-8dc8-189fb36f6b75" />
+
+
 
 **Transform your personal data into actionable insights and control your system with a beautiful, 100% offline, privacy-first AI dashboard.**
 
