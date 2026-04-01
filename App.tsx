@@ -1,15 +1,27 @@
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
+import clsx from "clsx";
 import { NavBar } from "./components/NavBar";
 import { UploadPanel } from "./components/UploadPanel";
 import { InsightsDashboard } from "./components/InsightsDashboard";
 import { ChatAssistant } from "./components/ChatAssistant";
 import { ReportsPanel } from "./components/ReportsPanel";
+import { FileManagerPanel } from "./components/FileManagerPanel";
+import { OSAssistantPanel } from "./components/OSAssistantPanel";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { useLifeOSStore } from "./store/useLifeOSStore";
 import { useIndexedDB } from "./hooks/useIndexedDB";
 import { summarizeData } from "./utils/analyzeData";
-import { Loader2, Sparkles, Database, FileText, RotateCcw } from "lucide-react";
+import { subscribeToEvents, type SSEEvent } from "./utils/osAssistantApi";
+import { Loader2, Sparkles, Database, FileText, RotateCcw, Monitor, X } from "lucide-react";
+
+// ─── Toast notification type for app detection ──────────────────────────────
+type AppToast = {
+  id: string;
+  displayName: string;
+  processName: string;
+  timestamp: number;
+};
 
 function App() {
   const {
@@ -28,6 +40,39 @@ function App() {
   const { getAllRecords, getAllSources, clearAll, resetChatHistory: clearChatHistoryDB } =
     useIndexedDB();
 
+  // ─── Global SSE Toast Notifications ──────────────────────────────────────
+  const [appToasts, setAppToasts] = useState<AppToast[]>([]);
+
+  const dismissToast = useCallback((id: string) => {
+    setAppToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const handleEnableAssistant = useCallback((id: string) => {
+    dismissToast(id);
+    setView("os_assistant");
+  }, [dismissToast, setView]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToEvents((event: SSEEvent) => {
+      if (event.type === "app_detected" && event.displayName) {
+        const toast: AppToast = {
+          id: `${event.processName}-${Date.now()}`,
+          displayName: event.displayName,
+          processName: event.processName || "",
+          timestamp: Date.now(),
+        };
+        setAppToasts((prev) => [...prev, toast]);
+
+        // Auto-dismiss after 10 seconds
+        setTimeout(() => {
+          setAppToasts((prev) => prev.filter((t) => t.id !== toast.id));
+        }, 10000);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // ─── Bootstrap ───────────────────────────────────────────────────────────
   useEffect(() => {
     const bootstrap = async () => {
       const [loadedSources, loadedRecords] = await Promise.all([
@@ -53,22 +98,30 @@ function App() {
     setSummary(summarizeData([], timeframe));
   };
 
+  const isFullScreenView = view === "file_manager" || view === "os_assistant";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-champagne-50 via-white to-champagne-100/50 text-navy-900 transition-colors dark:from-navy-950 dark:via-navy-900 dark:to-obsidian-950 dark:text-champagne-100">
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[300px_1fr]">
         <NavBar active={view} onSelect={setView} />
 
-        <main className="relative flex flex-col gap-10 px-6 py-10 md:px-10 lg:px-16 overflow-x-hidden">
+        <main className={clsx(
+          "relative flex flex-col overflow-x-hidden",
+          isFullScreenView ? "p-0 h-screen bg-gradient-to-br from-white via-champagne-50/50 to-white dark:from-navy-950 dark:via-navy-900 dark:to-obsidian-950" : "gap-10 px-6 py-10 md:px-10 lg:px-16"
+        )}>
           {/* Decorative Background Elements */}
-          <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-            <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-gradient-to-br from-champagne-400/30 via-blush-400/20 to-transparent blur-3xl dark:from-champagne-500/10 dark:via-blush-500/10" />
-            <div className="absolute top-1/2 -right-32 h-80 w-80 rounded-full bg-gradient-to-br from-blush-400/20 via-champagne-400/15 to-transparent blur-3xl dark:from-blush-500/10 dark:via-champagne-500/5" />
-            <div className="absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-navy-400/10 via-champagne-400/10 to-transparent blur-3xl dark:from-navy-500/5 dark:via-champagne-500/5" />
-          </div>
+          {!isFullScreenView && (
+            <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+              <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-gradient-to-br from-champagne-400/30 via-blush-400/20 to-transparent blur-3xl dark:from-champagne-500/10 dark:via-blush-500/10" />
+              <div className="absolute top-1/2 -right-32 h-80 w-80 rounded-full bg-gradient-to-br from-blush-400/20 via-champagne-400/15 to-transparent blur-3xl dark:from-blush-500/10 dark:via-champagne-500/5" />
+              <div className="absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-gradient-to-br from-navy-400/10 via-champagne-400/10 to-transparent blur-3xl dark:from-navy-500/5 dark:via-champagne-500/5" />
+            </div>
+          )}
 
           {/* Premium Header */}
-          <header className="relative overflow-hidden rounded-3xl border border-champagne-200/50 bg-gradient-to-r from-white/95 via-champagne-50/40 to-white/95 p-8 shadow-premium backdrop-blur dark:border-champagne-500/20 dark:from-navy-900/90 dark:via-navy-800/50 dark:to-navy-900/90">
-            {/* Decorative Accent */}
+          {!isFullScreenView && (
+            <header className="relative overflow-hidden rounded-3xl border border-champagne-200/50 bg-gradient-to-r from-white/95 via-champagne-50/40 to-white/95 p-8 shadow-premium backdrop-blur dark:border-champagne-500/20 dark:from-navy-900/90 dark:via-navy-800/50 dark:to-navy-900/90">
+              {/* Decorative Accent */}
             <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-gradient-to-br from-champagne-400/30 to-blush-400/20 blur-2xl" />
 
             <div className="relative flex flex-wrap items-start justify-between gap-8">
@@ -141,13 +194,16 @@ function App() {
               </div>
             </div>
           </header>
+          )}
 
           {/* Content Section */}
-          <section className="flex-1">
+          <section className="flex-1 flex flex-col h-full min-h-0">
             {view === "upload" && <UploadPanel />}
             {view === "insights" && <InsightsDashboard />}
             {view === "chat" && <ChatAssistant />}
             {view === "reports" && <ReportsPanel />}
+            {view === "file_manager" && <FileManagerPanel />}
+            {view === "os_assistant" && <OSAssistantPanel />}
           </section>
 
           {/* Loading Overlay */}
@@ -171,6 +227,56 @@ function App() {
           )}
         </main>
       </div>
+
+      {/* ─── Global App Detection Toast Notifications ───────────────────── */}
+      {appToasts.length > 0 && (
+        <div className="fixed top-6 right-6 z-50 flex flex-col gap-3 animate-slide-up" style={{ maxWidth: '420px' }}>
+          {appToasts.map((toast) => (
+            <div
+              key={toast.id}
+              className="relative overflow-hidden rounded-2xl border border-champagne-300/50 bg-gradient-to-r from-white/95 via-champagne-50/80 to-white/95 p-5 shadow-premium-lg backdrop-blur-xl dark:border-champagne-500/20 dark:from-navy-900/95 dark:via-navy-800/80 dark:to-navy-900/95"
+            >
+              {/* Shimmer accent */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-champagne-400 via-blush-400 to-champagne-400 shimmer-bg" />
+
+              <button
+                onClick={() => dismissToast(toast.id)}
+                className="absolute top-3 right-3 rounded-lg p-1 text-navy-400 hover:bg-navy-100 hover:text-navy-600 dark:text-slate-500 dark:hover:bg-navy-700 dark:hover:text-slate-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-400/20 to-blue-500/10 dark:from-blue-500/20 dark:to-blue-600/10">
+                  <Monitor className="h-5 w-5 text-blue-500" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-navy-900 dark:text-white">
+                    {toast.displayName} detected
+                  </p>
+                  <p className="mt-0.5 text-xs text-navy-500 dark:text-slate-400">
+                    Enable LifeOS AI assistant for this session?
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => handleEnableAssistant(toast.id)}
+                      className="rounded-lg bg-gradient-to-r from-champagne-500 to-blush-500 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md hover:scale-105"
+                    >
+                      Enable AI
+                    </button>
+                    <button
+                      onClick={() => dismissToast(toast.id)}
+                      className="rounded-lg border border-champagne-200/50 bg-white/80 px-4 py-1.5 text-xs font-semibold text-navy-500 transition-all hover:bg-champagne-50 dark:border-champagne-500/20 dark:bg-navy-800/50 dark:text-slate-400"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

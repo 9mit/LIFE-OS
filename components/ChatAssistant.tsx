@@ -3,25 +3,17 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { useIndexedDB } from "../hooks/useIndexedDB";
 import { useLifeOSStore } from "../store/useLifeOSStore";
-import { cosineSimilarity, keywordExtract, textEmbedding } from "../utils/embeddings";
-import type {
-  InsightSummary,
-  LifeOSChatMessage,
-  LifeOSDataRecord,
-} from "../types/data";
+import type { LifeOSChatMessage } from "../types/data";
 import { summarizeData } from "../utils/analyzeData";
-import { Trash2, Sparkles, Send, Bot, User, MessageCircle, Cpu, Mic, MicOff, Loader2 } from "lucide-react";
-import { getLLMEngine, generateLocalLLMResponse, SELECTED_MODEL } from "../utils/localLLM";
+import { Sparkles, Send, Bot, User, MessageCircle, Cpu, Mic, MicOff, Loader2 } from "lucide-react";
+import { fetchChatResponse } from "../utils/fileManagerApi";
 import { useWhisper } from "../hooks/useWhisper";
-import type { InitProgressReport } from "@mlc-ai/web-llm";
 
-const THRESHOLD = 0.3;
+
 
 const ChatAssistant = () => {
   const [input, setInput] = useState("");
   const [answering, setAnswering] = useState(false);
-  const [llmProgress, setLlmProgress] = useState<InitProgressReport | null>(null);
-  const [llmReady, setLlmReady] = useState(false);
 
   const {
     isRecording,
@@ -44,15 +36,6 @@ const ChatAssistant = () => {
 
   useEffect(() => {
     getChatHistory().then(setChatHistory);
-
-    // Initialize LLM Engine in background
-    if (navigator.gpu) {
-      getLLMEngine((progress) => {
-        setLlmProgress(progress);
-      }).then((engine) => {
-        if (engine) setLlmReady(true);
-      }).catch(console.error);
-    }
   }, [getChatHistory, setChatHistory]);
 
   useEffect(() => {
@@ -96,31 +79,26 @@ const ChatAssistant = () => {
     setInput("");
 
     try {
-      if (llmReady) {
-        // True Local RAG Generation
-        await generateAnswerRAG(
-          input.trim(),
-          records,
-          summary ?? summarizeData(records, timeframe),
-          chatHistory,
-          (chunk: string) => {
-            // Stream text directly to the active message box in the Store
-            useLifeOSStore.getState().updateChatMessage(syntheticId, chunk);
-          }
-        );
-        // Save the final streamed message to IndexedDB
-        const finalContent = useLifeOSStore.getState().chatHistory.find(m => m.id === syntheticId)?.content || "";
-        await addChatMessage({ ...assistantMessage, content: finalContent });
-      } else {
-        // Fallback Heuristic Generation
-        const response = await generateAnswerFallback(
-          input.trim(),
-          records,
-          summary ?? summarizeData(records, timeframe)
-        );
-        useLifeOSStore.getState().updateChatMessage(syntheticId, response);
-        await addChatMessage({ ...assistantMessage, content: response });
-      }
+      // Create context mapping for API requests
+      const apiMessages = chatHistory.map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+      apiMessages.push({ role: "user", content: input.trim() });
+
+      // Append summary as a system message
+      const systemContext = summary ?? summarizeData(records, timeframe);
+      apiMessages.unshift({
+        role: "system" as any,
+        content: `You are LifeOS, a private offline intelligence hub. Answer queries using the following context summary: ${systemContext.narrative}`
+      });
+
+      setAnswering(true);
+      
+      const response = await fetchChatResponse(apiMessages);
+      useLifeOSStore.getState().updateChatMessage(syntheticId, response.message.content);
+      await addChatMessage({ ...assistantMessage, content: response.message.content });
+
     } catch (error) {
       console.error(error);
       useLifeOSStore.getState().updateChatMessage(syntheticId, "I encountered an error analyzing that data locally. Please try again.");
@@ -130,8 +108,12 @@ const ChatAssistant = () => {
   };
 
   const handleResetChat = async () => {
-    await resetChatHistory();
-    setChatHistory([]);
+    if (window.confirm("Are you sure you want to start a new chat? This will permanently delete the current conversation history to maintain your privacy.")) {
+        // Clear from IndexedDB
+        await resetChatHistory();
+        // Clear from active Zustand UI state
+        setChatHistory([]);
+    }
   };
 
   return (
@@ -152,13 +134,11 @@ const ChatAssistant = () => {
               </span>
               <div className="flex items-center gap-2">
                 <p className="text-sm text-navy-600/80 dark:text-slate-300">
-                  {llmReady ? "True local conversational AI active" : "Converse with your data insights"}
+                  Converse with your data insights using true local AI
                 </p>
-                {llmReady && (
-                  <span className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-600 dark:bg-green-500/20 dark:text-green-400">
-                    <Cpu className="h-3 w-3" /> WebGPU Engine
-                  </span>
-                )}
+                <span className="flex items-center gap-1 rounded-full bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-600 dark:bg-green-500/20 dark:text-green-400">
+                  <Cpu className="h-3 w-3" /> Ollama Engine
+                </span>
               </div>
             </div>
           </div>
@@ -182,9 +162,9 @@ const ChatAssistant = () => {
 
           <button
             onClick={handleResetChat}
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-blush-200/50 bg-white/60 px-4 py-2 text-xs font-medium text-blush-600 transition-all hover:border-blush-400 hover:bg-blush-50 dark:border-blush-500/20 dark:bg-navy-800/50 dark:text-blush-300 dark:hover:border-blush-400/50"
+            className="inline-flex w-fit items-center gap-2 rounded-xl border border-champagne-300 bg-white/80 px-4 py-2 text-xs font-semibold text-champagne-600 transition-all hover:border-champagne-500 hover:bg-champagne-50 hover:text-champagne-700 hover:shadow-sm dark:border-champagne-500/30 dark:bg-navy-800/80 dark:text-champagne-300 dark:hover:border-champagne-400 dark:hover:bg-navy-700/80"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Clear conversation
+            <MessageCircle className="h-3.5 w-3.5" /> New Chat
           </button>
         </div>
       </div>
@@ -241,22 +221,6 @@ const ChatAssistant = () => {
             <p className="text-sm text-navy-500 dark:text-slate-400 max-w-md">
               Ask your first question to begin exploring your personal data insights.
             </p>
-            {!llmReady && llmProgress && (
-              <div className="mt-8 flex w-full max-w-sm flex-col items-center gap-3 rounded-2xl border border-champagne-200/50 bg-white/50 p-4 dark:border-champagne-500/20 dark:bg-navy-800/50">
-                <p className="text-xs font-medium text-navy-600 dark:text-champagne-300">
-                  <Cpu className="inline h-3.5 w-3.5 mr-1" /> Initializing Local Neural Engine
-                </p>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-champagne-100 dark:bg-navy-900">
-                  <div
-                    className="h-full bg-gradient-to-r from-champagne-400 to-blush-400 transition-all duration-300"
-                    style={{ width: `${Math.round(llmProgress.progress * 100)}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-navy-400 dark:text-slate-400 truncate w-full text-center">
-                  {llmProgress.text}
-                </p>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -307,117 +271,5 @@ const ChatAssistant = () => {
     </div>
   );
 };
-
-// --- TRUE GENERATIVE AI RAG PIPELINE ---
-async function generateAnswerRAG(
-  question: string,
-  records: LifeOSDataRecord[],
-  summary: InsightSummary,
-  chatHistory: LifeOSChatMessage[],
-  onChunk: (chunk: string) => void
-): Promise<void> {
-
-  // Retrieve relevant context using Transformers.js semantic embedding
-  const queryEmbedding = await textEmbedding(question);
-  const scored = (await Promise.all(records
-    .map(async (record) => ({
-      record,
-      score: cosineSimilarity(queryEmbedding, record.embedding),
-    }))))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 15); // Pass up to top 15 records as context
-
-  const relevantRecords = scored.filter((item) => item.score > THRESHOLD).map(i => i.record);
-
-  // Pass everything to WebLLM to formulate a response
-  await generateLocalLLMResponse(
-    question,
-    relevantRecords,
-    summary,
-    chatHistory.map(h => ({ role: h.role as any, content: h.content })),
-    onChunk
-  );
-}
-
-// --- FALLBACK HEURISTIC AI PIPELINE ---
-async function generateAnswerFallback(
-  question: string,
-  records: LifeOSDataRecord[],
-  summary: InsightSummary
-): Promise<string> {
-  if (!records.length) {
-    return "No records are indexed yet. Upload your data to start the conversation.";
-  }
-
-  const queryEmbedding = await textEmbedding(question);
-  const scored = (await Promise.all(records
-    .map(async (record) => ({
-      record,
-      score: cosineSimilarity(queryEmbedding, record.embedding),
-    }))))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
-
-  const relevantRecords = scored.filter((item) => item.score > THRESHOLD);
-  const keywords = await keywordExtract(question);
-
-  // Always recalculate summary for accurate counts
-  const actualSummary = summary.totalRecords > 0 ? summary : summarizeData(records, "all");
-  const totalRecords = records.length;
-  const totalSources = new Set(records.map(r => r.sourceId)).size;
-
-  if (!relevantRecords.length) {
-    const keywordDisplay = keywords.length > 0
-      ? `Keywords detected: ${keywords.join(", ")}.`
-      : "";
-    return `I found ${totalRecords} records across ${totalSources} source(s), but no exact matches for your query. ${keywordDisplay} Try rephrasing or asking about specific categories like spending, health, or habits.`;
-  }
-
-  const numericCandidates: Record<string, number> = {};
-  relevantRecords.forEach(({ record }) => {
-    Object.entries(record.numericFields).forEach(([key, value]) => {
-      numericCandidates[key] = (numericCandidates[key] ?? 0) + value;
-    });
-  });
-
-  const bestNumeric = Object.entries(numericCandidates)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 1);
-
-  const categoryCounts: Record<string, number> = {};
-  relevantRecords.forEach(({ record }) => {
-    Object.values(record.categoricalFields).forEach((value) => {
-      categoryCounts[value] = (categoryCounts[value] ?? 0) + 1;
-    });
-  });
-
-  const topCategory = Object.entries(categoryCounts).sort(([, a], [, b]) => b - a)[0];
-
-  const forecastMatches = actualSummary?.forecasts.filter((forecast) =>
-    question.toLowerCase().includes(forecast.field.toLowerCase())
-  );
-
-  return [
-    `Based on ${totalRecords} records from ${totalSources} source(s):`,
-    bestNumeric.length
-      ? `Approximate total for ${bestNumeric[0][0]}: ${bestNumeric[0][1].toFixed(2)}.`
-      : null,
-    topCategory ? `Most referenced category: ${topCategory[0]}.` : null,
-    forecastMatches?.length
-      ? `Projected next value: ${forecastMatches
-        .map((item) => `${item.field} ≈ ${item.forecast.toFixed(2)}`)
-        .join(" · ")}.`
-      : actualSummary?.forecasts.length
-        ? `General projections: ${actualSummary.forecasts
-          .map((item) => `${item.field} ≈ ${item.forecast.toFixed(2)}`)
-          .join(" · ")}.`
-        : null,
-    `Context sample: ${relevantRecords
-      .map((item) => item.record.summary)
-      .join(" | ")}`,
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
 
 export { ChatAssistant };

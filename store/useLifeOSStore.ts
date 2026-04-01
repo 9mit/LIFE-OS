@@ -9,8 +9,20 @@ import {
   TimeframeFilter,
 } from "../types/data";
 
-export type LifeOSView = "upload" | "insights" | "chat" | "reports";
+export type LifeOSView = "upload" | "insights" | "chat" | "reports" | "file_manager" | "os_assistant";
 export type Theme = "light" | "dark";
+
+export type ActivityLogEntry = {
+  id: string;
+  type: 'task_complete' | 'app_detected' | 'file_written' | 'office_written' | 'info' | 'error';
+  message: string;
+  action?: string;
+  success?: boolean;
+  processName?: string;
+  displayName?: string;
+  filePath?: string;
+  timestamp: number;
+};
 
 type LifeOSState = {
   view: LifeOSView;
@@ -21,6 +33,9 @@ type LifeOSState = {
   chatHistory: LifeOSChatMessage[];
   isLoading: boolean;
   theme: Theme;
+  // OS Assistant state
+  processWatcherEnabled: boolean;
+  assistantActivityLog: ActivityLogEntry[];
   setView: (view: LifeOSView) => void;
   setSources: (sources: LifeOSSource[]) => void;
   setRecords: (records: LifeOSDataRecord[]) => void;
@@ -31,6 +46,9 @@ type LifeOSState = {
   updateChatMessage: (id: string, content: string) => void;
   setLoading: (value: boolean) => void;
   setTheme: (theme: Theme) => void;
+  setProcessWatcherEnabled: (enabled: boolean) => void;
+  addActivityLogEntry: (entry: ActivityLogEntry) => void;
+  clearActivityLog: () => void;
   reset: () => void;
 };
 
@@ -57,6 +75,8 @@ export const useLifeOSStore = create<LifeOSState>()(
       chatHistory: [],
       isLoading: false,
       theme: "light",
+      processWatcherEnabled: false,
+      assistantActivityLog: [],
       setView: (view) => set({ view }),
       setSources: (sources) => set({ sources }),
       setRecords: (records) => set({ records }),
@@ -73,6 +93,12 @@ export const useLifeOSStore = create<LifeOSState>()(
         })),
       setLoading: (value) => set({ isLoading: value }),
       setTheme: (theme) => set({ theme }),
+      setProcessWatcherEnabled: (enabled) => set({ processWatcherEnabled: enabled }),
+      addActivityLogEntry: (entry) =>
+        set((state) => ({
+          assistantActivityLog: [entry, ...state.assistantActivityLog].slice(0, 200),
+        })),
+      clearActivityLog: () => set({ assistantActivityLog: [] }),
       reset: () =>
         set((state) => ({
           view: "upload",
@@ -83,6 +109,8 @@ export const useLifeOSStore = create<LifeOSState>()(
           chatHistory: [],
           isLoading: false,
           theme: state.theme,
+          processWatcherEnabled: false,
+          assistantActivityLog: [],
         })),
     }),
     {
@@ -91,6 +119,7 @@ export const useLifeOSStore = create<LifeOSState>()(
         view: state.view,
         timeframe: state.timeframe,
         theme: state.theme,
+        processWatcherEnabled: state.processWatcherEnabled,
       }),
     }
   )

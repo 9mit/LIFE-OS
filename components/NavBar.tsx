@@ -1,7 +1,7 @@
 
 import { LifeOSView } from "../store/useLifeOSStore";
 import clsx from "clsx";
-import { BookOpen, LayoutDashboard, MessageCircle, Upload, Sparkles } from "lucide-react";
+import { BookOpen, LayoutDashboard, MessageCircle, Upload, Sparkles, HardDrive, Monitor } from "lucide-react";
 import type { ElementType } from "react";
 
 const NAV_ITEMS: Array<{
@@ -33,6 +33,18 @@ const NAV_ITEMS: Array<{
     label: "Reports",
     subtitle: "Curate shareable briefs",
     icon: BookOpen,
+  },
+  {
+    view: "file_manager",
+    label: "Local Brain OS",
+    subtitle: "AI File Management",
+    icon: HardDrive,
+  },
+  {
+    view: "os_assistant",
+    label: "OS Assistant",
+    subtitle: "AI-powered OS control",
+    icon: Monitor,
   },
 ];
 

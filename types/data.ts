@@ -1,5 +1,5 @@
 
-export type DataSourceType = "csv" | "json" | "txt";
+export type DataSourceType = "csv" | "json" | "txt" | "xlsx" | "pdf";
 
 export type LifeOSSource = {
   id: string;

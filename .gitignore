@@ -7,10 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+
+# Runtime Database & History
+# We ignore ALL .db files to prevent leaking your operation history or metadata.
+*.db
+*.db-journal
+server/operations.db
+server/*.db
+
+# Assistant Runtime Folders
+# These contain your actual files/backups—never push them to GitHub.
+.trash/
+.backups/
+__backup_*
 
 # Local AI Models
 /public/models/*
@@ -26,3 +42,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
