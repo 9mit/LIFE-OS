@@ -1,14 +1,15 @@
-# LifeOS - Personal Intelligence Hub
+# LifeOS — Personal Intelligence Hub & AI OS Assistant
 
 <div align="center">
 
 ![LifeOS](screenshots/dark-mode.png)
 
-**Transform your personal data into actionable insights with a beautiful, privacy-first dashboard.**
+**Transform your personal data into actionable insights and control your system with a beautiful, 100% offline, privacy-first AI dashboard.**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/React-18.0+-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5.0+-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React](https://img.shields.io/badge/React-19.0+-61DAFB?logo=react&logoColor=black)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-6.0+-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Ollama](https://img.shields.io/badge/Ollama-phi3-blue?logo=ollama&logoColor=white)](https://ollama.com/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 </div>
@@ -17,82 +18,68 @@
 
 ## ✨ Features
 
-- **🗂️ Data Studio** - Upload and manage CSV, JSON, and TXT files
-- **🔍 Insight Lab** - AI-powered analysis with keyword extraction, mood signals, and forecasting
-- **🕸️ 3D Knowledge Graphs** - Visualize entity connections with interactive force-directed mapping
-- **💬 Ask LifeOS** - Generative RAG Q&A using local WebGPU LLMs
-- **🎙️ Edge-Voice Input** - Talk to LifeOS natively with local Whisper models for transcription
-- **📊 Reports** - Generate beautiful executive summaries and export to PDF
-- **🌙 Dark Mode** - Premium dark theme with glassmorphism design
-- **🔒 100% Offline** - All data and AI inference stays on your device, no cloud dependencies
+### 🧠 Intelligence Suite
+- **📊 Insights Dashboard** - Automated statistical analysis, trend detection, and AI-generated executive summaries.
+- **💬 Ask LifeOS (RAG)** - Natural language Q&A over your personal data using local WebGPU LLMs or Ollama.
+- **🎙️ Edge-Voice Input** - Talk to your system natively with local Whisper models for transcription.
+- **🕸️ 3D Knowledge Graphs** - Visualize entity connections and data relationships in an interactive 3D space.
 
----
+### 🖥️ OS AI Assistant
+- **🦾 System Automation** - Create, move, rename, or delete files across your system using natural language.
+- **📄 Office Integration** - Generate or edit Excel spreadsheets and Word documents via AI commands.
+- **🔍 Intelligent Search** - Search for files using semantic intent (e.g., "Find my resume from last year") across Desktop, Documents, and Downloads.
+- **🔔 Process Watcher** - Automatically detects when you open apps (Notepad, Word, etc.) and offers context-aware AI assistance.
 
-## 📸 Screenshots
-
-### Data Studio
-Upload and manage your personal data files with drag-and-drop simplicity.
-
-![Data Studio](screenshots/data-studio.png)
-
-### Insight Lab
-Explore AI-generated insights, keywords, mood analysis, and forecasts.
-
-![Insight Lab](screenshots/insight-lab.png)
-
-### Ask LifeOS
-Query your data using natural language with intelligent responses.
-
-![Ask LifeOS](screenshots/ask-lifeos.png)
-
-### Reports
-Generate comprehensive reports with executive summaries.
-
-![Reports](screenshots/reports.png)
-
-### Dark Mode
-A stunning dark theme for comfortable late-night analysis.
-
-![Dark Mode](screenshots/dark-mode.png)
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- **Node.js** 18.0 or higher
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/lifeos.git
-cd lifeos
-
-# Install dependencies
-npm install
-
-# Start the development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+### 🛡️ Privacy & Security
+- **🔒 100% Offline** - All AI inference and data processing stays on your machine. Zero cloud dependencies.
+- **🏗️ Security Sandbox** - Operations are restricted to safe directories (Desktop/Documents/Downloads) with strict file-type blocklists.
+- **♻️ Soft Deletes** - Files are moved to a local `.trash/` directory—never permanently deleted without your consent.
+- **⏳ Operation History** - Full undo/redo support for all filesystem actions via a local SQLite transaction log.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Technology | Purpose |
-|------------|---------|
-| **React 18** | UI Framework |
-| **TypeScript** | Type Safety |
-| **Vite** | Build Tool |
-| **Dexie.js** | IndexedDB Wrapper |
-| **Zustand** | State Management |
-| **jsPDF** | PDF Export |
-| **@mlc-ai/web-llm** | Local WebGPU LLM Engine |
-| **@xenova/transformers**| Local Embeddings & Whisper |
-| **react-force-graph-3d**| 3D Knowledge Visualization |
+| Layer | Technology |
+|-------|------------|
+| **Frontend** | React 19, TypeScript, Zustand, Tailwind CSS |
+| **Backend** | Node.js, Express 5 |
+| **AI Engine** | **Ollama** (phi3), **Transformers.js** (Whisper, Embeddings) |
+| **Persistence** | **Dexie.js** (IndexedDB), **SQLite** (Operation History) |
+| **Visualization** | Chart.js, force-graph-3d |
+| **File Processing**| PapaParse (CSV), xlsx, docx, mammoth, pdf.js |
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- **Node.js** 18.0 or higher.
+- **Ollama** installed and running locally (`ollama serve`).
+  - Pull the required model: `ollama pull phi3`
+
+### 2. Installation
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/lifeos.git
+cd lifeos/LIFE_OS
+
+# Install dependencies
+npm install
+```
+
+### 3. Run the App
+You need to run both the frontend and the backend server:
+
+```bash
+# Terminal 1: Start the Frontend (Vite)
+npm run dev
+
+# Terminal 2: Start the Backend (Express & OS Assistant)
+npm run server
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
@@ -100,40 +87,32 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ```
 LIFE_OS/
-├── components/         # React UI components
-│   ├── AskLifeOS.tsx  # Natural language query interface
-│   ├── DataStudio.tsx # File upload and management
-│   ├── InsightLab.tsx # Analytics dashboard
-│   ├── Reports.tsx    # Report generation
-│   └── ...
-├── hooks/             # Custom React hooks
-├── storage/           # IndexedDB configuration (Dexie)
+├── components/         # React UI (Insights, Chat, OS Assistant, Knowledge Graph)
+├── hooks/             # Custom React hooks (IndexedDB, Whisper, Theme)
+├── server/            # Node.js backend (Ollama integration, File Assistant, Tasks)
+│   ├── ollama.js      # AI Intent parsing & generation
+│   ├── taskExecutor.js# Deterministic action execution logic
+│   └── index.js       # Express API & Server-Sent Events (SSE)
+├── storage/           # Browser-side persistence (Dexie)
 ├── store/             # Zustand state management
-├── utils/             # Utility functions
-│   ├── analyzeData.ts # Data analysis engine
-│   ├── embeddings.ts  # Local embedding generation
-│   └── ...
-├── App.tsx            # Main application component
-└── index.tsx          # Entry point
+├── utils/             # Data analysis, parsing, and AI utility functions
+├── App.tsx            # Main application layout & global event handling
+└── index.tsx          # Application entry point
 ```
 
 ---
 
-## 🔐 Privacy First
+## 🔐 Privacy-by-Design
 
-LifeOS is designed with privacy as a core principle:
-
-- ✅ **100% Offline** - No data leaves your device
-- ✅ **No API Keys Required** - Works without any external services
-- ✅ **Local Storage** - All data stored in browser's IndexedDB
-- ✅ **No Tracking** - Zero analytics or telemetry
+LifeOS follows strict privacy principles:
+- **Zero Third-Party APIs**: No OpenAI, Anthropic, or Google keys required.
+- **Air-Gapped Potential**: Can run without an active internet connection once models are cached.
+- **Minimal Footprint**: No background telemetry or usage tracking.
 
 ---
 
 ## 📝 License
+MIT License - Copyright (c) 2026 LifeOS Team.
 
-MIT License - feel free to use this project for personal or commercial purposes.
-
----
 
 
